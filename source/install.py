@@ -8,41 +8,48 @@ from os.path import dirname, exists
 
 from shutil import copy
 
-from re import match
+from re import Pattern, Match, compile
 
 prefix: (str | None) = getenv('PREFIX')
+if type(prefix) == str: program_path: str = prefix + '/bin/termux-update'
+else: program_path: str = '/data/data/com.termux/files/usr/bin/termux-update'
 
-if type(prefix) == str: filepath: str = prefix + '/bin/termux-update'
-else: filepath: str = '/data/data/com.termux/files/usr/bin/termux-update'
-
-copy(f'{dirname(__file__)}/main.py', filepath)
-system(f'chmod +x {filepath}')
+copy(f'{dirname(__file__)}/main.py', program_path)
+system(f'chmod +x {program_path}')
 
 home: (str | None) = getenv('HOME')
+if type(home) == str: file_path: str = home + '/.termux/termux.properties'
+else: file_path: str = '/data/data/com.termux/files/home/.termux/termux.properties'
 
-if type(home) == str: filepath: str = home + '/.termux/termux.properties'
-else: filepath: str = '/data/data/com.termux/files/home/.termux/termux.properties'
+if not exists(f'{file_path}.bak'):
+    copy(file_path, f'{file_path}.bak')
 
-if not exists(f'{filepath}.bak'):
-    copy(filepath, f'{filepath}.bak')
+with open(file_path, 'r') as file:
+    file_copy: list[str] = file.readlines()
+    file.close()
 
-with open(filepath, 'r') as file:
-    lines = file.readlines()
+with open(file_path, 'w') as file:
 
-allow_external_apps: bool = False
+    permission: bool = False
+    pattern: Pattern = compile(r'(^#?\s*allow-external-apps\s*=\s*)(\S+)(.*)')
 
-with open(filepath, 'w') as file:
-    for line in lines:
+    for line in file_copy:
 
-        if match(r'^#?\s*allow-external-apps\s*=', line):
-            file.write('allow-external-apps = true\n')
-            allow_external_apps = True
+        correspond: (Match | None) = pattern.match(line)
+
+        if correspond:
+            comment: (str | None) = correspond.group(3)
+            file.write(f'allow-external-apps = true {comment}\n')
+            permission = True
 
         else:
             file.write(line)
 
-    if allow_external_apps == False:
+    if permission == False:
+        file.write('# Parameter modified by Termux Update:\n')
         file.write('allow-external-apps = true\n')
+
+    file.close()
 
 system('termux-reload-settings')
 
