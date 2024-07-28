@@ -3,95 +3,231 @@
 
 """Main program script"""
 
-from argparse import ArgumentParser
-
-from requests import RequestException, Response, get
-
-from re import findall
+from argparse import ArgumentParser, Namespace
 
 from os import getenv, remove, system
 from os.path import exists
 
+from re import findall
+
+from shutil import copy
+
+from subprocess import PIPE, CompletedProcess, run
+
+from requests import RequestException, Response, get
+
+
 argument = ArgumentParser(
-    prog='termux-update',
-    description='Script for updating Termux and its extensions',
-    epilog='https://github.com/RuanMiguel-DRD/Termux-Update'
+    prog="termux-update",
+    description="Script for updating Termux and its extensions",
+    epilog="https://github.com/RuanMiguel-DRD/Termux-Update",
 )
 
 argument.add_argument(
-    'application',
-    choices=['app', 'api', 'boot', 'styling', 'widget', 'float', 'tasker']
+    "-s",
+    "--skip",
+    action="store_true",
+    help="if you want to skip the process of comparing versions",
 )
 
-arg: str = argument.parse_args().application
+argument.add_argument(
+    "-c",
+    "--compatibility",
+    action="store_true",
+    help="in case of malfunction, activate to try to install the programs by an alternative method",
+)
 
-match arg:
+argument.add_argument(
+    "application",
+    choices=["app", "api", "boot", "styling", "widget", "window", "tasker"],
+    help="choose between Termux and one of its extensions",
+)
 
-    case 'api':
-        url: str = r'https://f-droid.org/en/packages/com.termux.api/'
 
-    case 'boot':
-        url: str = r'https://f-droid.org/en/packages/com.termux.boot/'
+skip: Namespace = argument.parse_args().skip
+compatibility: Namespace = argument.parse_args().compatibility
+application: Namespace = argument.parse_args().application
 
-    case 'styling':
-        url: str = r'https://f-droid.org/en/packages/com.termux.styling/'
 
-    case 'widget':
-        url: str = r'https://f-droid.org/en/packages/com.termux.widget/'
+REGEX_VERSION_REMOTE: str = r"com\.[a-z]+\.?[a-z]+_([0-9]+)\.apk"
+REGEX_VERSION_LOCAL: str = r"com\.termux\." + str(application) + r"\s+versionCode:(\d+)"
+REGEX_DOWNLOAD: str = r"https:\/\/f-droid\.org\/repo\/com\.[a-z]+\.?[a-z]+_[0-9]+"
 
-    case 'float':
-        url: str = r'https://f-droid.org/en/packages/com.termux.window/'
 
-    case 'tasker':
-        url: str = r'https://f-droid.org/en/packages/com.termux.tasker/'
+def main():
+    """Main function of the script"""
 
-    case _:
-        url: str = r'https://f-droid.org/en/packages/com.termux/'
+    try:
 
-regex: str = r'https:\/\/f-droid\.org\/repo\/com\.[a-z]+\.?[a-z]+_[0-9]+\.apk'
+        system("termux-wake-lock")
 
-class CodeStatusError(BaseException):
-    """Exception for unexpected HTTP response errors"""
+        endpoint: str
 
-try:
+        match application:
 
-    response: Response = get(url)
+            case "api":
+                endpoint = ".api/"
 
-    if response.status_code != 200:
-        raise CodeStatusError
+            case "boot":
+                endpoint = ".boot/"
 
-    result: list[str] = findall(regex, response.text)
-    if len(result) < 1:
-        raise IndexError
+            case "styling":
+                endpoint = ".styling/"
 
-    download: Response = get(result[0])
+            case "widget":
+                endpoint = ".widget/"
 
-    if download.status_code != 200:
-        raise CodeStatusError
+            case "window":
+                endpoint = ".window/"
 
-    home: (str | None) = getenv('HOME')
-    if type(home) != str: home = '/data/data/com.termux/files/home'
+            case "tasker":
+                endpoint = ".tasker/"
 
-    filepath: str = home + '/.termux-update.apk'
+            case _:
+                endpoint = "/"
 
-    if exists(filepath):
-        remove(filepath)
+        url_page: str = f"https://f-droid.org/en/packages/com.termux{endpoint}"
 
-    with open(filepath, 'wb') as file:
-        file.write(download.content)
-        file.close()
+        response: Response = connect(url_page)
 
-    system(f'termux-open {filepath}')
-    exit(0)
+        if skip == False:
 
-except (RequestException):
-    print('An error occurred while connecting to the internet')
-    exit(1)
+            version_remote: str | None
+            version_local: str | None
 
-except (CodeStatusError):
-    print('Error, unexpected HTTP response')
-    exit(1)
+            if application != "app":
+                command: CompletedProcess = run(
+                    ["termux-info"], stdout=PIPE, shell=True, text=True
+                )
 
-except (IndexError):
-    print('Error, no link to download the program was found')
-    exit(1)
+                version_local = findPattern(REGEX_VERSION_LOCAL, command.stdout, False)
+
+            else:
+                version_local = getEnv("TERMUX_VERSION")
+
+            version_remote = findPattern(REGEX_VERSION_REMOTE, response.text)
+
+            if application == "app":
+                print(
+                    "Termux does not provide a version code in its API in the same way as its extensions"
+                )
+
+            print(f"Current version available on servers is: {version_remote}")
+            print(f"Current installed version is: {version_local}")
+
+            input("\nPress ENTER to continue or CTRL + C, then ENTER to cancel")
+
+        url_download: str | None = findPattern(REGEX_DOWNLOAD, response.text)
+
+        download_apk: Response = connect(f"{url_download}.apk")
+        download_asc: Response = connect(f"{url_download}.apk.asc")
+
+        home: str = getEnv("HOME")
+
+        file_name: str = f"{home}/.termux-update/termux-{application}"
+
+        file_apk: str = f"{file_name}.apk"
+        file_asc: str = f"{file_name}.apk.asc"
+
+        if exists(file_apk):
+            remove(file_apk)
+
+        if exists(file_asc):
+            remove(file_asc)
+
+        with open(file_apk, "wb") as file:
+            file.write(download_apk.content)
+            file.close()
+
+        with open(file_asc, "wb") as file:
+            file.write(download_asc.content)
+            file.close()
+
+        if compatibility == True:
+            file_comp: str = "/storage/emulated/0/Download/termux-update.apk"
+
+            copy(file_apk, file_comp)
+            system(
+                f"am start --user 0 -a android.intent.action.VIEW -d file://{file_comp} -t application/vnd.android.package-archive"
+            )
+
+        else:
+            system(f"termux-open {file_apk}")
+
+        exit(0)
+
+    except KeyboardInterrupt:
+        print("Script terminated by user")
+        exit(1)
+
+
+def connect(url: str) -> Response:
+    """Accesses a URL and returns a instance containing the result of the connection
+
+    Args:
+        url (str): text containing the URL that will be accessed
+
+    Returns:
+        Response: instance containing the result of the connection
+    """
+
+    try:
+        response: Response = get(url)
+        if response.status_code != 200:
+            raise RequestException
+
+        return response
+
+    except RequestException:
+        print("An error occurred while connecting to the internet")
+        exit(3)
+
+
+def findPattern(regex: str, text: str, required: bool = True) -> str | None:
+    """Function to query regex in texts and return the first compatible result
+
+    Args:
+        regex (str): regex code that will be queried
+        text (str): text where the regex query will be performed
+        required (bool): specifies whether it is mandatory to find a match or not
+
+    Returns:
+        str: first result matching the query
+        None: if you don't find any results
+    """
+
+    try:
+        result: list[str] = findall(regex, text)
+        return result[0]
+
+    except IndexError:
+
+        if required != False:
+            print("No valid results were found during the search")
+            exit(2)
+
+        else:
+            return None
+
+
+def getEnv(env: str) -> str:
+    """Function to receive the value of an environment variable
+
+    Args:
+        env (str): environment variable
+
+    Returns:
+        str: environment variable value
+    """
+
+    environment: str | None = getenv(env)
+
+    if type(environment) != str:
+        print("Could not find environment variable")
+        exit(2)
+
+    return environment
+
+
+if __name__ == "__main__":
+    main()
