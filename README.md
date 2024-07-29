@@ -64,3 +64,7 @@ In case of changes in the source code of the F-Droid website, addition of a fire
 For the script to work, it needs to modify the `termux.properties` file to release the `allow-external-apps` permission, and the program also requires access to the cell phone's storage if it wants to use compatibility mode, and to ensure proper functioning, it also requires permission to run in the background
 
 All these permissions are used to ensure the program works and may reduce the security of your cell phone, so use at your own risk
+
+### Version control
+
+The script will always download the latest released version of the programs, regardless of whether they are unstable, incompatible with your Android version or incompatible with your architecture
