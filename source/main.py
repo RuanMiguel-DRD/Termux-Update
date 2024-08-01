@@ -3,6 +3,7 @@
 
 """Main program script"""
 
+
 from argparse import ArgumentParser, Namespace
 
 from os import getenv, remove, system
@@ -14,8 +15,9 @@ from shutil import copy
 
 from subprocess import PIPE, CompletedProcess, run
 
-from requests import RequestException, Response, get
+from sys import exit
 
+from requests import RequestException, Response, get
 
 argument = ArgumentParser(
     prog="termux-update",

@@ -3,12 +3,16 @@
 
 """Program installation script"""
 
+
 from os import getenv, mkdir, system
 from os.path import dirname, exists
 
 from re import Match, Pattern, compile
 
 from shutil import copy
+
+from sys import exit
+
 
 prefix: str | None = getenv("PREFIX")
 
@@ -21,6 +25,7 @@ else:
 copy(f"{dirname(__file__)}/main.py", program_path)
 system(f"chmod +x {program_path}")
 
+
 home: str | None = getenv("HOME")
 
 file_path: str
@@ -29,10 +34,13 @@ if type(home) == str:
 else:
     file_path = "/data/data/com.termux/files/home/.termux/termux.properties"
 
+
 mkdir(f"{home}/.termux-update")
+
 
 if not exists(f"{file_path}.bak"):
     copy(file_path, f"{file_path}.bak")
+
 
 with open(file_path, "r") as file:
     file_copy: list[str] = file.readlines()
