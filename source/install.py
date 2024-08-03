@@ -35,7 +35,8 @@ else:
     file_path = "/data/data/com.termux/files/home/.termux/termux.properties"
 
 
-mkdir(f"{home}/.termux-update")
+if not exists(f"{home}/.termux-update"):
+    mkdir(f"{home}/.termux-update")
 
 
 if not exists(f"{file_path}.bak"):
