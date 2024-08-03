@@ -4,7 +4,7 @@
 """Main program script"""
 
 
-from argparse import ArgumentParser, Namespace
+from argparse import ArgumentParser
 
 from os import getenv, remove, system
 from os.path import exists
@@ -18,6 +18,7 @@ from subprocess import PIPE, CompletedProcess, run
 from sys import exit
 
 from requests import RequestException, Response, get
+
 
 argument = ArgumentParser(
     prog="termux-update",
@@ -46,14 +47,9 @@ argument.add_argument(
 )
 
 
-skip: Namespace = argument.parse_args().skip
-compatibility: Namespace = argument.parse_args().compatibility
-application: Namespace = argument.parse_args().application
-
-
-REGEX_VERSION_REMOTE: str = r"com\.[a-z]+\.?[a-z]+_([0-9]+)\.apk"
-REGEX_VERSION_LOCAL: str = r"com\.termux\." + str(application) + r"\s+versionCode:(\d+)"
-REGEX_DOWNLOAD: str = r"https:\/\/f-droid\.org\/repo\/com\.[a-z]+\.?[a-z]+_[0-9]+"
+skip: bool = argument.parse_args().skip
+compatibility: bool = argument.parse_args().compatibility
+application: str = argument.parse_args().application
 
 
 def main():
@@ -62,6 +58,10 @@ def main():
     try:
 
         system("termux-wake-lock")
+
+        REGEX_VERSION_REMOTE: str = r"com\.[a-z]+\.?[a-z]+_([0-9]+)\.apk"
+        REGEX_VERSION_LOCAL: str = r"com\.termux\." + application + r"\s+versionCode:(\d+)"
+        REGEX_DOWNLOAD: str = r"https:\/\/f-droid\.org\/repo\/com\.[a-z]+\.?[a-z]+_[0-9]+"
 
         endpoint: str
 
@@ -92,39 +92,51 @@ def main():
 
         response: Response = connect(url_page)
 
-        if skip == False:
+        if skip == False and application != "app":
 
             version_remote: str | None
             version_local: str | None
 
-            if application != "app":
-                command: CompletedProcess = run(
-                    ["termux-info"], stdout=PIPE, shell=True, text=True
-                )
+            command: CompletedProcess = run(
+                ["termux-info"], stdout=PIPE, shell=True, text=True
+            )
 
-                version_local = findPattern(REGEX_VERSION_LOCAL, command.stdout, False)
-
-            else:
-                version_local = getEnv("TERMUX_VERSION")
-
+            version_local = findPattern(REGEX_VERSION_LOCAL, command.stdout, False)
             version_remote = findPattern(REGEX_VERSION_REMOTE, response.text)
 
-            if application == "app":
-                print(
-                    "Termux does not provide a version code in its API in the same way as its extensions"
-                )
+            if type(version_local) == str:
 
-            print(f"Current version available on servers is: {version_remote}")
-            print(f"Current installed version is: {version_local}")
+                if version_local == version_remote:
+                    print(f"You already have the latest version of {application} installed")
+                    exit(0)
 
-            input("\nPress ENTER to continue or CTRL + C, then ENTER to cancel")
+                else:
+                    print(f"Your current installed version is {version_local} the latest available version is {version_remote}")
+
+            else:
+                print("The program is not installed")
+
+            answers: str
+
+            while True:
+                answers = input("Do you want to continue with the installation process? [Y/N] ").lower()
+
+                if answers in ["y", "n"]:
+                    if answers == "y":
+                        break
+
+                    else:
+                        raise KeyboardInterrupt
 
         url_download: str | None = findPattern(REGEX_DOWNLOAD, response.text)
 
         download_apk: Response = connect(f"{url_download}.apk")
         download_asc: Response = connect(f"{url_download}.apk.asc")
 
-        home: str = getEnv("HOME")
+        home: str | None = getenv("HOME")
+        if type(home) != str:
+            print("Could not find environment variable")
+            exit(2)
 
         file_name: str = f"{home}/.termux-update/termux-{application}"
 
@@ -134,24 +146,22 @@ def main():
         if exists(file_apk):
             remove(file_apk)
 
-        if exists(file_asc):
-            remove(file_asc)
-
         with open(file_apk, "wb") as file:
             file.write(download_apk.content)
             file.close()
+
+        if exists(file_asc):
+            remove(file_asc)
 
         with open(file_asc, "wb") as file:
             file.write(download_asc.content)
             file.close()
 
         if compatibility == True:
-            file_comp: str = "/storage/emulated/0/Download/termux-update.apk"
+            file_copy: str = "/storage/emulated/0/Download/termux-update.apk"
 
-            copy(file_apk, file_comp)
-            system(
-                f"am start --user 0 -a android.intent.action.VIEW -d file://{file_comp} -t application/vnd.android.package-archive"
-            )
+            copy(file_apk, file_copy)
+            system(f"am start --user 0 -a android.intent.action.VIEW -d file://{file_copy} -t application/vnd.android.package-archive")
 
         else:
             system(f"termux-open {file_apk}")
@@ -204,31 +214,12 @@ def findPattern(regex: str, text: str, required: bool = True) -> str | None:
 
     except IndexError:
 
-        if required != False:
+        if required == True:
             print("No valid results were found during the search")
             exit(2)
 
         else:
             return None
-
-
-def getEnv(env: str) -> str:
-    """Function to receive the value of an environment variable
-
-    Args:
-        env (str): environment variable
-
-    Returns:
-        str: environment variable value
-    """
-
-    environment: str | None = getenv(env)
-
-    if type(environment) != str:
-        print("Could not find environment variable")
-        exit(2)
-
-    return environment
 
 
 if __name__ == "__main__":

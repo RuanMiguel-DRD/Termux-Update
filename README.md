@@ -5,13 +5,11 @@ Script for updating Termux and its extensions via command line
 
 The function of this script is to allow the user to update Termux and its extensions directly from the command line, without the need to have F-Droid installed on the cell phone, thus consuming memory and system resources
 
-The script accesses F-Droid and searches for the link to the latest released version of the apk, then downloads the program and its signature, then compares and asks the user whether or not they want to continue with the update
+The script accesses F-Droid and searches for the latest released version of the apk, then makes a comparison between the versions. If you do not have the program installed or the latest version of it, it asks if you want to continue with the installation, and if you confirm, the latest version of the program will be downloaded and installed on your device
 
 You can skip the comparison between the installed version and the latest available version by passing the `--skip` or `-s` argument
 
-The comparison of the main Termux application is different from the other extensions and the versions available online
-
-This is because Termux does not state its version code in its API like the other extensions
+No comparison occurs if you try to update Termux, as it does not have a proper way to make its version code available
 
 The program keeps copies of the latest downloaded version of the programs in the `$HOME/.termux-update` folder and the same goes for signing keys
 
@@ -59,7 +57,7 @@ If the script does not work traditionally, try using it using the `--compatibili
 
 In case of changes in the source code of the F-Droid website, addition of a firewall, or change in the naming of Termux files, the entire program is subject to stop working
 
-### Security issues
+### Security considerations
 
 For the script to work, it needs to modify the `termux.properties` file to release the `allow-external-apps` permission, and the program also requires access to the cell phone's storage if it wants to use compatibility mode, and to ensure proper functioning, it also requires permission to run in the background
 
