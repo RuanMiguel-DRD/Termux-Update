@@ -1,8 +1,7 @@
 #!/data/data/com.termux/files/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""Program installation script"""
-
+"Program installation script"
 
 from os import getenv, mkdir, system
 from os.path import dirname, exists

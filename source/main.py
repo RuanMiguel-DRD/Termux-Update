@@ -1,8 +1,7 @@
 #!/data/data/com.termux/files/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""Main program script"""
-
+"Main program script"
 
 from argparse import ArgumentParser
 
@@ -20,7 +19,7 @@ from sys import exit
 from requests import RequestException, Response, get
 
 
-argument = ArgumentParser(
+argument: ArgumentParser = ArgumentParser(
     prog="termux-update",
     description="Script for updating Termux and its extensions",
     epilog="https://github.com/RuanMiguel-DRD/Termux-Update",
@@ -53,7 +52,7 @@ application: str = argument.parse_args().application
 
 
 def main():
-    """Main function of the script"""
+    "Main function of the script"
 
     try:
 
