@@ -1,6 +1,14 @@
 # Termux-Update
 Script for updating Termux and its extensions via command line
 
+## Warning
+
+**This project has been discontinued and is unstable**
+
+The constant changes in Android, variations in the operating system on each different cell phone, and other factors, make this project very difficult to become stable. It may or may not work on your device, but there is no guarantee and this may change over time
+
+The malfunction that prevents this script from working is Termux's inability to open the application installer in a stable way
+
 ## How it works
 
 The function of this script is to allow the user to update Termux and its extensions directly from the command line, without the need to have F-Droid installed on the cell phone, thus consuming memory and system resources
