@@ -5,7 +5,9 @@ Script for updating Termux and its extensions via command line
 
 **This project has been discontinued and is unstable**
 
-The constant changes in Android, variations in the operating system on each different cell phone, and other factors, make this project very difficult to become stable. It may or may not work on your device, but there is no guarantee and this may change over time
+The constant changes in Android, variations in the operating system on each different cell phone, and other factors, make this project very difficult to become stable
+
+It may or may not work on your device, but there is no guarantee and this may change over time
 
 The malfunction that prevents this script from working is Termux's inability to open the application installer in a stable way
 

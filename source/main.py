@@ -66,26 +66,13 @@ def main():
 
         match application:
 
-            case "api":
-                endpoint = ".api/"
-
-            case "boot":
-                endpoint = ".boot/"
-
-            case "styling":
-                endpoint = ".styling/"
-
-            case "widget":
-                endpoint = ".widget/"
-
-            case "window":
-                endpoint = ".window/"
-
-            case "tasker":
-                endpoint = ".tasker/"
-
-            case _:
-                endpoint = "/"
+            case "api": endpoint = ".api/"
+            case "boot": endpoint = ".boot/"
+            case "styling": endpoint = ".styling/"
+            case "widget": endpoint = ".widget/"
+            case "window": endpoint = ".window/"
+            case "tasker": endpoint = ".tasker/"
+            case _: endpoint = "/"
 
         url_page: str = f"https://f-droid.org/en/packages/com.termux{endpoint}"
 
@@ -159,8 +146,14 @@ def main():
         if compatibility == True:
             file_copy: str = "/storage/emulated/0/Download/termux-update.apk"
 
-            copy(file_apk, file_copy)
-            system(f"am start --user 0 -a android.intent.action.VIEW -d file://{file_copy} -t application/vnd.android.package-archive")
+            try:
+                copy(file_apk, file_copy)
+                system(f"am start --user 0 -a android.intent.action.VIEW -d file://{file_copy} -t application/vnd.android.package-archive")
+
+            except (FileNotFoundError, PermissionError):
+                print("Error, insufficient permissions or nonexistent destination directory, run `ter` to free up storage access")
+                print("And make sure the directory has the proper permissions")
+                exit(2)
 
         else:
             system(f"termux-open {file_apk}")

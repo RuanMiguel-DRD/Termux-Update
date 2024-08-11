@@ -13,6 +13,9 @@ from shutil import copy
 from sys import exit
 
 
+system("termux-setup-storage")
+
+
 prefix: str | None = getenv("PREFIX")
 
 program_path: str
@@ -36,7 +39,6 @@ else:
 
 if not exists(f"{home}/.termux-update"):
     mkdir(f"{home}/.termux-update")
-
 
 if not exists(f"{file_path}.bak"):
     copy(file_path, f"{file_path}.bak")
