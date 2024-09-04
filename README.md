@@ -19,6 +19,8 @@ The script accesses F-Droid and searches for the latest released version of the 
 
 You can skip the comparison between the installed version and the latest available version by passing the `--skip` or `-s` argument
 
+If you do not skip the version check, Termux will copy a text containing the version specifications to the clipboard
+
 No comparison occurs if you try to update Termux, as it does not have a proper way to make its version code available
 
 The program keeps copies of the latest downloaded version of the programs in the `$HOME/.termux-update` folder and the same goes for signing keys
