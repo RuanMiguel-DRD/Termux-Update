@@ -3,7 +3,7 @@
 
 "Main program script"
 
-from argparse import ArgumentParser
+from argparse import ArgumentParser, Namespace
 
 from os import getenv, remove, system
 from os.path import exists
@@ -45,10 +45,7 @@ argument.add_argument(
     help="choose between Termux and one of its extensions",
 )
 
-
-skip: bool = argument.parse_args().skip
-compatibility: bool = argument.parse_args().compatibility
-application: str = argument.parse_args().application
+argument: Namespace = argument.parse_args()
 
 
 def main():
@@ -59,12 +56,12 @@ def main():
         system("termux-wake-lock")
 
         REGEX_VERSION_REMOTE: str = r"com\.[a-z]+\.?[a-z]+_([0-9]+)\.apk"
-        REGEX_VERSION_LOCAL: str = r"com\.termux\." + application + r"\s+versionCode:(\d+)"
+        REGEX_VERSION_LOCAL: str = r"com\.termux\." + argument.application + r"\s+versionCode:(\d+)"
         REGEX_DOWNLOAD: str = r"https:\/\/f-droid\.org\/repo\/com\.[a-z]+\.?[a-z]+_[0-9]+"
 
         endpoint: str
 
-        match application:
+        match argument.application:
 
             case "api": endpoint = ".api/"
             case "boot": endpoint = ".boot/"
@@ -78,7 +75,7 @@ def main():
 
         response: Response = connect(url_page)
 
-        if skip == False and application != "app":
+        if argument.skip == False and argument.application != "app":
 
             version_remote: str | None
             version_local: str | None
@@ -93,7 +90,7 @@ def main():
             if type(version_local) == str:
 
                 if version_local == version_remote:
-                    print(f"You already have the latest version of {application} installed")
+                    print(f"You already have the latest version of {argument.application} installed")
                     exit(0)
 
                 else:
@@ -124,7 +121,7 @@ def main():
             print("Could not find environment variable")
             exit(2)
 
-        file_name: str = f"{home}/.termux-update/termux-{application}"
+        file_name: str = f"{home}/.termux-update/termux-{argument.application}"
 
         file_apk: str = f"{file_name}.apk"
         file_asc: str = f"{file_name}.apk.asc"
@@ -143,7 +140,7 @@ def main():
             file.write(download_asc.content)
             file.close()
 
-        if compatibility == True:
+        if argument.compatibility == True:
             file_copy: str = "/storage/emulated/0/Download/termux-update.apk"
 
             try:
